@@ -1,0 +1,273 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard — Document Vault Engine{% endblock %}
+
+{% block content %}
+<div class="dashboard-wrapper">
+    <!-- WELCOME / HERO SECTION -->
+    <section class="hero-section glass-panel">
+        <div class="hero-content">
+            <div class="hero-tag">
+                <span class="pulse-tag"></span>
+                <span>ENTERPRISE PERSISTENCE ENGINE</span>
+            </div>
+            <h1 class="hero-title">
+                Permanent Document Vault <span class="gradient-text">with Docker Volumes</span>
+            </h1>
+            <p class="hero-description">
+                Engineered for resilience. Every uploaded PDF is stored on an independent, named Docker Volume 
+                (<code>pdf_uploads</code>) while metadata is indexed in PostgreSQL (<code>postgres_data</code>). 
+                Files permanently survive container restarts, deletions, and rebuilds.
+            </p>
+            <div class="architecture-pills">
+                <span class="arch-pill"><span class="pill-dot"></span> Flask Backend</span>
+                <span class="arch-pill"><span class="pill-dot"></span> PostgreSQL Metadata</span>
+                <span class="arch-pill"><span class="pill-dot"></span> Docker Named Volumes</span>
+                <span class="arch-pill"><span class="pill-dot"></span> SHA-256 Checksums</span>
+            </div>
+        </div>
+    </section>
+
+    <!-- REAL DATABASE-DERIVED METRICS -->
+    <section class="stats-grid" aria-label="System Metrics">
+        <div class="stat-card glass-panel">
+            <div class="stat-icon-wrap icon-blue">
+                <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+            </div>
+            <div class="stat-info">
+                <span class="stat-label">Total Documents</span>
+                <span class="stat-value" id="stat-total-docs">{{ stats.total_documents }}</span>
+            </div>
+        </div>
+
+        <div class="stat-card glass-panel">
+            <div class="stat-icon-wrap icon-purple">
+                <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="12" cy="5" rx="9" ry="3"></ellipse><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path></svg>
+            </div>
+            <div class="stat-info">
+                <span class="stat-label">Total Volume Storage</span>
+                <span class="stat-value" id="stat-total-size">{{ stats.total_size }}</span>
+            </div>
+        </div>
+
+        <div class="stat-card glass-panel">
+            <div class="stat-icon-wrap icon-green">
+                <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+            </div>
+            <div class="stat-info">
+                <span class="stat-label">Available on Disk</span>
+                <span class="stat-value text-success" id="stat-available-docs">{{ stats.available_documents }}</span>
+            </div>
+        </div>
+
+        <div class="stat-card glass-panel">
+            <div class="stat-icon-wrap icon-orange">
+                <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+            </div>
+            <div class="stat-info">
+                <span class="stat-label">Missing Records</span>
+                <span class="stat-value {% if stats.missing_documents > 0 %}text-danger{% else %}text-muted{% endif %}" id="stat-missing-docs">{{ stats.missing_documents }}</span>
+            </div>
+        </div>
+    </section>
+
+    <!-- UPLOAD SECTION -->
+    <section class="upload-section glass-panel" aria-labelledby="upload-heading">
+        <div class="section-header">
+            <div>
+                <h2 id="upload-heading" class="section-title">Upload PDF Document</h2>
+                <p class="section-subtitle">Files are validated for binary PDF signatures, assigned UUID identifiers, and saved directly to the persistent volume.</p>
+            </div>
+            <div class="upload-limit-badge">
+                <span>Max File Size: {{ max_file_size_mb }} MB</span>
+            </div>
+        </div>
+
+        <form id="pdf-upload-form" action="{{ url_for('documents.upload') }}" method="POST" enctype="multipart/form-data" class="upload-form">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+            <div class="drop-zone" id="drop-zone" tabindex="0" role="button" aria-label="Drop PDF files here or click to select">
+                <input type="file" id="file-input" name="file" accept=".pdf,application/pdf" class="file-input-hidden" required>
+                
+                <div class="drop-zone-idle" id="drop-zone-idle">
+                    <div class="upload-cloud-icon">
+                        <svg viewBox="0 0 24 24" width="48" height="48" fill="none" stroke="currentColor" stroke-width="1.8">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                            <polyline points="17 8 12 3 7 8"></polyline>
+                            <line x1="12" y1="3" x2="12" y2="15"></line>
+                        </svg>
+                    </div>
+                    <div class="drop-text-primary">Drag &amp; Drop PDF Document Here</div>
+                    <div class="drop-text-secondary">or <span class="browse-link">browse files</span> from your computer</div>
+                    <div class="drop-specs">Strictly valid PDF files (%PDF- signature verified)</div>
+                </div>
+
+                <!-- Selected File Display -->
+                <div class="drop-zone-selected" id="drop-zone-selected" style="display: none;">
+                    <div class="selected-file-card">
+                        <div class="pdf-file-icon">
+                            <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="#7C3AED" stroke-width="2">
+                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                <polyline points="14 2 14 8 20 8"></polyline>
+                                <text x="7" y="18" fill="#7C3AED" font-size="6" font-family="monospace" font-weight="bold">PDF</text>
+                            </svg>
+                        </div>
+                        <div class="selected-file-details">
+                            <span class="selected-file-name" id="selected-file-name">filename.pdf</span>
+                            <span class="selected-file-size" id="selected-file-size">0 KB</span>
+                        </div>
+                        <button type="button" class="btn-clear-file" id="btn-clear-file" title="Clear selected file" aria-label="Remove selection">&times;</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Upload Progress Bar -->
+            <div class="upload-progress-wrapper" id="upload-progress-wrapper" style="display: none;">
+                <div class="progress-bar-track">
+                    <div class="progress-bar-fill" id="progress-bar-fill"></div>
+                </div>
+                <div class="progress-text" id="progress-text">Encrypting and uploading... 0%</div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="upload-actions">
+                <button type="submit" id="btn-upload-submit" class="btn btn-primary btn-glow" disabled>
+                    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                        <polyline points="17 8 12 3 7 8"></polyline>
+                        <line x1="12" y1="3" x2="12" y2="15"></line>
+                    </svg>
+                    <span id="upload-btn-text">Upload to Persistent Storage</span>
+                </button>
+            </div>
+        </form>
+    </section>
+
+    <!-- UPLOADED DOCUMENTS VAULT TABLE -->
+    <section class="documents-section glass-panel" aria-labelledby="documents-heading">
+        <div class="section-header">
+            <div>
+                <h2 id="documents-heading" class="section-title">Persistent Document Index</h2>
+                <p class="section-subtitle">Real-time status of files physically mounted at <code>/app/uploads</code> and recorded in PostgreSQL.</p>
+            </div>
+            
+            <div class="search-filter-wrap">
+                <input type="text" id="document-search-input" class="search-input" placeholder="Filter documents by name or checksum..." aria-label="Filter documents">
+            </div>
+        </div>
+
+        <div class="table-responsive">
+            <table class="documents-table" id="documents-table">
+                <thead>
+                    <tr>
+                        <th scope="col">Document</th>
+                        <th scope="col">Upload Timestamp</th>
+                        <th scope="col">File Size</th>
+                        <th scope="col">Volume Status</th>
+                        <th scope="col">SHA-256 Checksum</th>
+                        <th scope="col" class="text-right">Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="documents-table-body">
+                    {% if documents and documents|length > 0 %}
+                        {% for item in documents %}
+                            {% set doc = item.model %}
+                            <tr class="document-row" data-id="{{ doc.id }}" data-name="{{ doc.original_filename|lower }}" data-hash="{{ doc.sha256|lower }}">
+                                <td class="col-filename">
+                                    <div class="filename-cell">
+                                        <div class="doc-type-icon">
+                                            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#3B82F6" stroke-width="2">
+                                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                                <polyline points="14 2 14 8 20 8"></polyline>
+                                            </svg>
+                                        </div>
+                                        <div class="filename-details">
+                                            <span class="file-name" title="{{ doc.original_filename }}">{{ doc.original_filename }}</span>
+                                            <span class="file-uuid" title="UUID Identifier: {{ doc.id }}">{{ doc.id }}</span>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="col-date">
+                                    <span class="date-text">{{ doc.uploaded_at.strftime('%Y-%m-%d %H:%M:%S UTC') if doc.uploaded_at else 'Unknown' }}</span>
+                                </td>
+                                <td class="col-size">
+                                    <span class="size-badge">{{ doc.human_readable_size }}</span>
+                                </td>
+                                <td class="col-status">
+                                    {% if item.is_available %}
+                                        <span class="status-badge badge-available" title="Document physically exists on Docker Volume">
+                                            <span class="dot-indicator green"></span> In Volume
+                                        </span>
+                                    {% else %}
+                                        <span class="status-badge badge-missing" title="Metadata present in PostgreSQL, but physical file was deleted from Volume">
+                                            <span class="dot-indicator red"></span> Missing File
+                                        </span>
+                                    {% endif %}
+                                </td>
+                                <td class="col-hash">
+                                    <div class="hash-cell">
+                                        <code class="hash-code" title="{{ doc.sha256 }}">{{ doc.sha256[:10] }}...{{ doc.sha256[-8:] }}</code>
+                                        <button type="button" class="btn-copy-hash" data-copy="{{ doc.sha256 }}" title="Copy full SHA-256 checksum" aria-label="Copy hash">
+                                            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                                        </button>
+                                    </div>
+                                </td>
+                                <td class="col-actions text-right">
+                                    <div class="action-btn-group">
+                                        {% if item.is_available %}
+                                            <a href="{{ url_for('documents.download', document_id=doc.id) }}" class="btn-action btn-download" title="Download original PDF" aria-label="Download {{ doc.original_filename }}">
+                                                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                                    <polyline points="7 10 12 15 17 10"></polyline>
+                                                    <line x1="12" y1="15" x2="12" y2="3"></line>
+                                                </svg>
+                                                <span>Download</span>
+                                            </a>
+                                        {% else %}
+                                            <button class="btn-action btn-download disabled" disabled title="Physical file is not present in storage">
+                                                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                                    <line x1="9" y1="9" x2="15" y2="15"></line>
+                                                    <line x1="15" y1="9" x2="9" y2="15"></line>
+                                                </svg>
+                                                <span>Missing</span>
+                                            </button>
+                                        {% endif %}
+
+                                        <button type="button" class="btn-action btn-inspect" data-inspect-id="{{ doc.id }}" title="View Document Inspection Details" aria-label="Inspect metadata">
+                                            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+                                        </button>
+
+                                        <button type="button" class="btn-action btn-delete" data-delete-id="{{ doc.id }}" data-delete-name="{{ doc.original_filename }}" title="Delete Document" aria-label="Delete {{ doc.original_filename }}">
+                                            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    {% endif %}
+                </tbody>
+            </table>
+
+            <!-- EMPTY VAULT STATE -->
+            <div class="empty-state" id="empty-vault-state" {% if documents and documents|length > 0 %}style="display: none;"{% endif %}>
+                <div class="empty-state-visual">
+                    <svg viewBox="0 0 24 24" width="64" height="64" fill="none" stroke="#7C3AED" stroke-width="1.5">
+                        <rect x="3" y="3" width="18" height="18" rx="3" ry="3"></rect>
+                        <line x1="9" y1="9" x2="15" y2="15"></line>
+                        <line x1="15" y1="9" x2="9" y2="15"></line>
+                    </svg>
+                </div>
+                <h3 class="empty-title">Vault is Currently Empty</h3>
+                <p class="empty-subtitle">No PDF documents have been uploaded yet. Upload a document using the drop zone above.</p>
+            </div>
+
+            <!-- SEARCH NO RESULTS STATE -->
+            <div class="empty-state" id="search-empty-state" style="display: none;">
+                <h3 class="empty-title">No Matching Documents Found</h3>
+                <p class="empty-subtitle">Try refining your search keyword or clearing the filter.</p>
+            </div>
+        </div>
+    </section>
+</div>
+{% endblock %}

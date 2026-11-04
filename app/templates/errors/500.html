@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+
+{% block title %}500 Internal Error — Document Vault{% endblock %}
+
+{% block content %}
+<div class="error-page-wrapper">
+    <div class="error-card glass-panel">
+        <div class="error-badge error-badge-danger">ERROR 500</div>
+        <h1 class="error-title">System Error</h1>
+        <p class="error-description">
+            {{ error or "An unexpected server error occurred while interacting with the database or storage subsystem." }}
+        </p>
+        <div class="error-actions">
+            <a href="{{ url_for('main.index') }}" class="btn btn-primary btn-glow">Return to Dashboard</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

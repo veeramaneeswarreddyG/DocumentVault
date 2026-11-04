@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+
+{% block title %}413 Payload Too Large — Document Vault{% endblock %}
+
+{% block content %}
+<div class="error-page-wrapper">
+    <div class="error-card glass-panel">
+        <div class="error-badge error-badge-warning">ERROR 413</div>
+        <h1 class="error-title">Upload Exceeds Capacity</h1>
+        <p class="error-description">
+            {{ error or "The uploaded PDF document exceeds the maximum permitted size configured for this vault." }}
+        </p>
+        <div class="error-actions">
+            <a href="{{ url_for('main.index') }}" class="btn btn-primary btn-glow">Return to Dashboard</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

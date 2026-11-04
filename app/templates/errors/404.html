@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+
+{% block title %}404 Not Found — Document Vault{% endblock %}
+
+{% block content %}
+<div class="error-page-wrapper">
+    <div class="error-card glass-panel">
+        <div class="error-badge">ERROR 404</div>
+        <h1 class="error-title">Resource Not Located</h1>
+        <p class="error-description">
+            {{ error or "The requested document or endpoint does not exist in the database or storage volume." }}
+        </p>
+        <div class="error-actions">
+            <a href="{{ url_for('main.index') }}" class="btn btn-primary btn-glow">Return to Dashboard</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

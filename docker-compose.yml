@@ -1,0 +1,53 @@
+services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: document_vault_web
+    restart: unless-stopped
+    ports:
+      - "${APP_PORT:-5000}:5000"
+    environment:
+      - FLASK_ENV=${FLASK_ENV:-production}
+      - SECRET_KEY=${SECRET_KEY:-9e8c45f47055047b19280a5e8e82ef62dfca4b76c8c4a51e6047248939c3e98b}
+      - POSTGRES_DB=${POSTGRES_DB:-document_vault}
+      - POSTGRES_USER=${POSTGRES_USER:-vault_user}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-vault_secure_password_9872}
+      - POSTGRES_HOST=db
+      - POSTGRES_PORT=5432
+      - UPLOAD_FOLDER=/app/uploads
+      - MAX_CONTENT_LENGTH=${MAX_CONTENT_LENGTH:-16777216}
+    volumes:
+      - pdf_uploads:/app/uploads
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+
+  db:
+    image: postgres:16-alpine
+    container_name: document_vault_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-document_vault}
+      POSTGRES_USER: ${POSTGRES_USER:-vault_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-vault_secure_password_9872}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 5s
+
+volumes:
+  pdf_uploads:
+    name: pdf_uploads
+  postgres_data:
+    name: postgres_data
