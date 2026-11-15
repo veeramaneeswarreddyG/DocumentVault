@@ -33,6 +33,7 @@ An enterprise-grade document upload system built with **Flask**, **PostgreSQL**,
 9. [Inspecting Docker Volumes](#9-inspecting-docker-volumes)
 10. [Local Development & Automated Testing (Outside Docker)](#10-local-development--automated-testing-outside-docker)
 11. [Troubleshooting & FAQ](#11-troubleshooting--faq)
+12. [Kubernetes (K8s) Deployment & Architecture](#12-kubernetes-k8s-deployment--architecture)
 
 ---
 
@@ -340,3 +341,30 @@ All 27 tests run in an isolated in-memory testing environment without modifying 
 ### 4. Health Check Returns "Degraded" or Status 503
 **Cause:** The upload directory permissions are read-only or PostgreSQL is not accepting queries.  
 **Solution:** Inspect logs using `docker compose logs -f web` and check database readiness.
+
+---
+
+## 12. Kubernetes (K8s) Deployment & Architecture
+
+Document Vault is fully containerized and orchestrated for Kubernetes. All manifests are located in the [`k8s/`](./k8s/) directory.
+
+### Quick Start with Kubernetes (Docker Desktop)
+```powershell
+# 1. Build the local image
+docker build -t documentvault-app:latest .
+
+# 2. Deploy all manifests (Deployments, Services, PVCs, ConfigMaps, Secrets)
+kubectl apply -f k8s/
+
+# 3. Check status
+kubectl get pods
+kubectl get services
+kubectl get pvc
+```
+
+Access the application in your browser:
+- `http://localhost:5000` (LoadBalancer)
+- or `http://localhost:30050` (NodePort)
+
+Detailed architecture, persistence tests, and scaling instructions are available in [k8s/README.md](./k8s/README.md).
+
